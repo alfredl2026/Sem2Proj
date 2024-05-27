@@ -1,0 +1,5 @@
+name;type;tier;ability
+None;None;0;None
+Apple;Consumable;1;Give one unit +1 attack and +1 health.
+Honey;Perk;1;Summon a 1/1 Bee after fainting.
+Water of Youth;Consumable;1;Transform one unit into another from the same tier.
