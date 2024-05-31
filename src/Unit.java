@@ -11,12 +11,14 @@ public class Unit {
     private int atk;
     private int hp;
     private int tier;
+    private int unitIndex;
     private int exp; //current exp
     private int price;
     private int level;
     private Perk perk; //change to Perk perk
     private String ability;
     private String trait;
+    private boolean summoned;
     public Unit(String name){
         this.name = name;
         this.price = 3;
@@ -24,6 +26,7 @@ public class Unit {
         this.level = 1;
         this.exp = 0;
         this.expReq = 2;
+        this.summoned = false;
         unitInitializer(name);
     }
     public void unitInitializer(String word){
@@ -40,7 +43,8 @@ public class Unit {
                         this.ability = array[4];
                     }
                 }
-            }   //System.out.println("Created " +  this);
+            }
+            //System.out.println("Created " +  this);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -79,6 +83,19 @@ public class Unit {
     public void setPerk(Perk perk){
         this.perk = perk;
     }
+    public void setSummoned(boolean summoned, String team, int index){
+        this.summoned = summoned;
+        if(this.summoned==true && team.equals("Player")){
+            for(int i = 0; i < main.teamBattle.length; i++){
+                if(main.teamBattle[i]!=null && main.teamBattle[i]!=this) main.teamBattle[i].friendSummoned(team,index);
+            }
+        }
+        else if(this.summoned==true && team.equals("Enemy")){
+            for(int i = 0; i < main.enemyTeamBattle.length; i++){
+                if(main.enemyTeamBattle[i]!=null && main.enemyTeamBattle[i]!=this) main.enemyTeamBattle[i].friendSummoned(team,index);
+            }
+        }
+    }
     public void updateAbility(){
         try {
             BufferedReader br = new BufferedReader(new FileReader("Unitdex"));
@@ -104,8 +121,20 @@ public class Unit {
                 level++;
                 updateAbility();
                 System.out.println();
-                System.out.println("The " + this.name + " levelled up to level " + this.level + "!");
+                System.out.println("The " + this.name + " leveled up to level " + this.level + "!");
                 main.waitEnter();
+                for(int i = 0; i < main.team.length; i++){
+                    if(main.fighting != 1){
+                        if(main.team[i] != null){
+                            main.team[i].levelUp();
+                        }
+                    }
+                    else if(main.fighting == 1){
+                        if(main.teamBattle[i] != null){
+                            main.teamBattle[i].levelUp();
+                        }
+                    }
+                }
             }
         }
     }
@@ -117,7 +146,7 @@ public class Unit {
     public void normalAttack() {
         Unit enemyUnit = new Unit(main.enemyTeamDisplayBattle[0]);
         String enemyName = main.enemyTeamBattle[0].getName();
-        main.enemyTeamBattle[0].setHp(main.enemyTeamBattle[0].getHp() - this.atk);
+        main.enemyTeamBattle[0].setHp(main.enemyTeamBattle[0].getHp()-this.atk);
         System.out.println("Your " + this.name + " attacked the enemy " + main.enemyTeamDisplayBattle[0] + " for " + this.atk + " damage!");
         main.waitEnter();
         main.teamBattle[4].setHp(main.teamBattle[4].getHp() - main.enemyTeamBattle[0].getAtk());
@@ -139,7 +168,7 @@ public class Unit {
         }
     }
     public void specialAttack(String team, int unitIndex, int dmg){
-        Unit enemyUnit = new Unit(main.enemyTeamDisplayBattle[0]);
+        Unit enemyUnit = main.enemyTeam[0];
         if(team.equals("Enemy")){
             main.enemyTeamBattle[unitIndex].setHp(main.enemyTeamBattle[unitIndex].getHp()-dmg);
             System.out.println("Your " + this.name + " attacked the enemy " + main.enemyTeamDisplayBattle[unitIndex] + " for " + dmg + " damage!");
@@ -165,6 +194,25 @@ public class Unit {
             faint("Player", 4);
         }
     }
+    public void checkFaint(){
+        Unit enemyUnit = main.enemyTeam[0];
+        for(int unitIndex = 0; unitIndex < main.enemyTeam.length; unitIndex++){
+            if(main.enemyTeamBattle[unitIndex]!=null && main.enemyTeamBattle[unitIndex].getHp()<=0){
+                main.enemyTeamBattle[unitIndex]=null;
+                main.enemyTeamDisplayBattle[unitIndex]=null;
+                System.out.println("The enemy's " + main.enemyTeamDisplayBattle[unitIndex] + " fainted!");
+                main.waitEnter();
+                enemyUnit.faint("Enemy", unitIndex);
+            }
+            if(main.teamBattle[unitIndex] !=null && main.teamBattle[unitIndex].getHp()<=0){
+                main.teamBattle[unitIndex]=null;
+                main.teamDisplayBattle[unitIndex]=null;
+                System.out.println("Your " +  main.teamDisplayBattle[unitIndex] + " fainted!");
+                main.waitEnter();
+                faint("Player", unitIndex);
+            }
+        }
+    }
     //Below are passive effects
     public void faint(String team, int index){
         int buffAmount = this.level;
@@ -178,37 +226,54 @@ public class Unit {
                     }
                     main.teamBattle[randIndex].setAtk(main.teamBattle[randIndex].getAtk()+buffAmount);
                     main.teamBattle[randIndex].setHp(main.teamBattle[randIndex].getHp()+buffAmount);
-                    System.out.println("Your Ant gave your " +  main.teamBattle[randIndex].getName() + "+" + buffAmount + "/+" + buffAmount + "!");
+                    System.out.println("Faint → Your Ant gave your " +  main.teamBattle[randIndex].getName() + " +" + buffAmount + "/+" + buffAmount + "!");
                     main.waitEnter();
                 }
             }
             else{
-                if(main.checkTeamEmptyBattle("Enemy")){
+                if(!main.checkTeamEmptyBattle("Enemy")){
                     while(main.enemyTeamBattle[randIndex]==null){
                         randIndex = random.nextInt(5);
                     }
                     main.enemyTeamBattle[randIndex].setAtk(main.enemyTeamBattle[randIndex].getAtk()+buffAmount);
                     main.enemyTeamBattle[randIndex].setHp(main.enemyTeamBattle[randIndex].getHp()+buffAmount);
-                    System.out.println("The enemy's Ant gave the enemy's " +  main.enemyTeamBattle[randIndex].getName() + "+" + buffAmount + "/+" + buffAmount + "!");
+                    System.out.println("Faint → The enemy's Ant gave the enemy's " +  main.enemyTeamBattle[randIndex].getName() + "+" + buffAmount + "/+" + buffAmount + "!");
                     main.waitEnter();
                 }
             }
         }
         else if(this.name.equals("Cricket")){
             if(team.equals("Player")){
-                main.teamBattle[4] = new Unit("Zombie Cricket");
-                main.teamBattle[4].setAtk(buffAmount);
-                main.teamBattle[4].setHp(buffAmount);
-                main.teamDisplayBattle[4] = "Zombie Cricket";
+                main.teamBattle[index] = new Unit("Zombie Cricket");
+                main.teamBattle[index].setAtk(buffAmount);
+                main.teamBattle[index].setHp(buffAmount);
+                main.teamDisplayBattle[index] = "Zombie Cricket";
                 System.out.println(this.ability);
+                main.teamBattle[index].setSummoned(true, team, index);
                 main.waitEnter();
             }
             else{
-                main.enemyTeamBattle[0] = new Unit("Zombie Cricket");
-                main.enemyTeamBattle[0].setAtk(buffAmount);
-                main.enemyTeamBattle[0].setHp(buffAmount);
-                main.enemyTeamDisplayBattle[0] = "Zombie Cricket";
+                main.enemyTeamBattle[index] = new Unit("Zombie Cricket");
+                main.enemyTeamBattle[index].setAtk(buffAmount);
+                main.enemyTeamBattle[index].setHp(buffAmount);
+                main.enemyTeamDisplayBattle[index] = "Zombie Cricket";
                 System.out.println(this.ability);
+                main.enemyTeamBattle[index].setSummoned(true, team, index);
+                main.waitEnter();
+            }
+        }
+    }
+    public void buy(int index){
+        int buffAmount = this.level;
+        Random random = new Random();
+        if(this.name.equals("Otter")){
+            for(int i = 0; i < buffAmount; i++){
+                int randIndex = random.nextInt(5);
+                while(main.team[randIndex]==null){
+                    randIndex = random.nextInt(5);
+                }
+                main.team[randIndex].setHp(main.team[randIndex].getHp()+1);
+                System.out.println("Buy → Your Otter gave your " +  main.team[randIndex].getName() + " +1 HP!");
                 main.waitEnter();
             }
         }
@@ -220,11 +285,11 @@ public class Unit {
             if(!main.checkTeamEmpty()){
                 for(int i = 0; i < buffAmount; i++){
                     int randIndex = random.nextInt(5);
-                    while(main.team[randIndex]==null){
+                    while(main.team[randIndex]==null && main.team[randIndex]!=this){
                         randIndex = random.nextInt(5);
                     }
                     main.team[randIndex].setAtk(main.team[randIndex].getAtk()+1);
-                    System.out.println("Your Beaver gave your " +  main.team[randIndex].getName() + "+1 ATK!");
+                    System.out.println("Sell → Your Beaver gave your " +  main.team[randIndex].getName() + " +1 ATK!");
                     main.waitEnter();
                 }
             }
@@ -234,8 +299,78 @@ public class Unit {
                 for (int i = 0; i < main.shopUnits.length; i++) {
                     if(main.shopUnits[i]!=null) main.shopUnits[i].setHp(main.shopUnits[i].getHp()+buffAmount);
                 }
-                System.out.println("Your " + this.name + " gave all shop pets +" + buffAmount + " health!");
+                System.out.println("Sell → Your Duck gave all shop pets +" + buffAmount + " health!");
                 main.waitEnter();
+            }
+        }
+        else if(this.name.equals("Pig")){
+            main.gold+=buffAmount;
+            System.out.println("Sell → Your Pig gave you +" + buffAmount + " gold!");
+        }
+    }
+    public void levelUp(){
+        int buffAmount = this.level;
+        Random random = new Random();
+        if(this.name.equals("Fish")){
+            if(!main.checkTeamEmpty()){
+                for(int i = 0; i < 2; i++){
+                    int randIndex = random.nextInt(5);
+                    while(main.team[randIndex]==null){
+                        randIndex = random.nextInt(5);
+                    }
+                    main.team[randIndex].setAtk(main.team[randIndex].getAtk()+buffAmount);
+                    main.team[randIndex].setHp(main.team[randIndex].getHp()+buffAmount);
+                    System.out.println("Level up → Your Fish gave your " +  main.team[randIndex].getName() + " +" + buffAmount + " ATK!");
+                    main.waitEnter();
+                }
+            }
+        }
+    }
+    public void friendSummoned(String team, int index){
+        int buffAmount = this.level;
+        Random random = new Random();
+        if(this.name.equals("Horse")){
+            if(team.equals("Player")){
+                main.teamBattle[index].setAtk(main.teamBattle[index].getAtk()+buffAmount);
+                System.out.println();
+                System.out.println("Friend summoned → Your Horse gave your " +  main.teamBattle[index].getName() + " +" + buffAmount + " ATK!");
+                main.waitEnter();
+            }
+            else if(team.equals("Enemy")){
+                main.enemyTeamBattle[index].setAtk(main.enemyTeamBattle[index].getAtk()+buffAmount);
+                System.out.println();
+                System.out.println("Friend summoned → The enemy's Horse gave their " +  main.enemyTeamBattle[index].getName() + " +" + buffAmount + " ATK!");
+                main.waitEnter();
+            }
+        }
+    }
+    public void startOfBattle(String team, int index){
+        int buffAmount = this.level;
+        Random random = new Random();
+        if(this.name.equals("Mosquito")){
+            if(team.equals("Player")){
+                for(int i = 0; i < buffAmount; i++){
+                    int randIndex = random.nextInt(5);
+                    while(main.enemyTeamBattle[randIndex]==null){
+                        randIndex = random.nextInt(5);
+                    }
+                    main.enemyTeamBattle[randIndex].setHp(main.enemyTeamBattle[randIndex].getHp()-1);
+                    System.out.println("Start of battle → Your Mosquito dealt " + 1 + " dmg to the enemy " + main.enemyTeamDisplayBattle[randIndex] + "!");
+                    main.waitEnter();
+                    checkFaint();
+                }
+            }
+            if(team.equals("Enemy")){
+                for(int i = 0; i < buffAmount; i++){
+                    int randIndex = random.nextInt(5);
+                    while(main.teamBattle[randIndex]==null){
+                        randIndex = random.nextInt(5);
+                    }
+                    main.teamBattle[randIndex].setHp(main.teamBattle[randIndex].getHp()-1);
+                    System.out.println("Start of battle → The enemy's Mosquito dealt " + 1 + " dmg to your " + main.teamDisplayBattle[randIndex] + "!");
+                    main.waitEnter();
+                    checkFaint();
+                }
             }
         }
     }

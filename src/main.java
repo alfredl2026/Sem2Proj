@@ -23,6 +23,7 @@ public class main {
     public static String[] enemyTeamDisplay = new String[5];
     public static String[] teamDisplayBattle = new String[5];
     public static String[] enemyTeamDisplayBattle = new String[5];
+    public static int[] teamHealthStorage = new int[5];
     public static Unit[] teamBattle = new Unit[5];
     public static Unit[] enemyTeamBattle = new Unit[5];
     public static Unit[] enemyTeam = new Unit[5];
@@ -31,9 +32,13 @@ public class main {
     public static int[][] enemyStatsDisplay = new int[5][2];
     public static String[] tempDisplay = new String[5];
     public static Unit[] tempTeam = new Unit[5];
+    public static String username;
 
     public static void main(String[] args) throws IOException, InterruptedException {
-        System.out.println("Please press Enter after every line to proceed.");
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Please enter a username: ");
+        username = scanner.next();
+        System.out.println("Welcome, " + username + ". Please press Enter after every line (like this one) to proceed :)");
         waitEnter();
         displayMenu();
         userSelectMenu();
@@ -54,10 +59,12 @@ public class main {
             startGame();
         }
         else if(input == 2){
+            displayLeaderboard("leaderboard");
+            waitEnter();
             userSelectMenu();
         }
         else if(input == 3){
-            System.out.println("Goodbye!");
+            System.out.println("Thanks for playing!");
             System.exit(0);
         }
         else{
@@ -72,19 +79,34 @@ public class main {
     public static void invalid(){
         System.out.println("\nInvalid Input!");
     }
-    public static void startGame() throws FileNotFoundException, InterruptedException {
+    public static void startGame() throws IOException, InterruptedException {
         Arrays.fill(team, null);
+        Arrays.fill(frozenItems, 0);
+        turn = 0;
+        shopTier = 1;
+        wins=0;
+        lives=5;
         shopPhase();
 
     }
-    public static void shopPhase() throws FileNotFoundException, InterruptedException {
+    public static void shopPhase() throws IOException, InterruptedException {
         gold=12;
         turn++;
-        if((turn-1)%2==0 && turn != 1) shopTier++;
+        if((turn-1)%2==0 && turn != 1){
+            shopTier++;
+            System.out.println("You reached turn " + turn + ". The shop tier has been increased to " + shopTier + "!");
+            waitEnter();
+        }
+        if(turn==3 && lives<5){
+            lives++;
+            System.out.println("You reached turn 3. You gained back a lost life!");
+            waitEnter();
+        }
         shopRefresh();
+        setTeamHealth();
         shopFunction();
     }
-    public static void shopFunction() throws FileNotFoundException, InterruptedException {
+    public static void shopFunction() throws IOException, InterruptedException {
         for(int i = 0; i<=50; i++){
             System.out.println();
         }
@@ -92,7 +114,23 @@ public class main {
         System.out.println("Wins - " + wins + " | Lives - " + lives +  " | Gold - " + gold);
         System.out.println("\nYour Team: " + Arrays.toString(teamDisplay));
         System.out.println();
-        System.out.println(Arrays.toString(shopDisplayUnits) + Arrays.toString(shopDisplayPerks));
+        System.out.print("[");
+        for(int i = 0; i < shopDisplayUnits.length; i++){
+            if(frozenItems[i]==1 && i!=4) System.out.print("\u001B[36m" + shopDisplayUnits[i] + "\u001B[0m" + ", ");
+            else if(frozenItems[i]==1 && i==4) System.out.print("\u001B[36m" + shopDisplayUnits[i] + "\u001B[0m");
+            else if(i!=4) System.out.print(shopDisplayUnits[i] + ", ");
+            else System.out.print(shopDisplayUnits[i]);
+        }
+        System.out.print("][");
+        for(int i = 0; i < shopDisplayPerks.length; i++){
+            if(frozenItems[i+5]==1 && i!=1) System.out.print("\u001B[36m"+ shopDisplayPerks[i] + "\u001B[0m" + ", ");
+            else if(frozenItems[i+5]==1 && i==1) System.out.print("\u001B[36m" + shopDisplayPerks[i] + "\u001B[0m");
+            else if(i!=1) System.out.print(shopDisplayPerks[i] + ", ");
+            else System.out.print(shopDisplayPerks[i]);
+        }
+        System.out.print("]");
+        //System.out.println(Arrays.toString(shopDisplayUnits) + Arrays.toString(shopDisplayPerks));
+        System.out.println();
         boolean isTeamFull = false;
         int intInput;
         int count = 0;
@@ -147,29 +185,30 @@ public class main {
                         else if(command.equals("buy")){
                             if(itemNumber<=5){
                                 if(gold >= unitChecking.getPrice()){
-                                    if(isTeamFull) System.out.println("Your team is full!");
-                                    else {
-                                        System.out.println("\nWhich slot do you want to put the " + unitChecking.getName() + " into (1-5): ");
-                                        intInput = scanner.nextInt();
-                                        if (intInput < 1 || intInput > 5 || teamDisplay[intInput - 1] != null && !Objects.equals(teamDisplay[intInput - 1], unitChecking.getName())) {
-                                            invalid();
-                                            waitEnter();
-                                            shopFunction();
-                                        } else if (Objects.equals(teamDisplay[intInput - 1], unitChecking.getName())) {
-                                            team[intInput - 1].merge();
-                                            gold -= unitChecking.getPrice();
-                                        } else {
-                                            teamDisplay[intInput - 1] = unitChecking.getName();
-                                            team[intInput - 1] = unitChecking;
-                                            gold -= unitChecking.getPrice();
-                                        }
-                                        shopBought(itemNumber);
+                                    System.out.println("\nWhich slot do you want to put the " + unitChecking.getName() + " into (1-5): ");
+                                    intInput = scanner.nextInt();
+                                    if (intInput < 1 || intInput > 5 || teamDisplay[intInput - 1] != null && !Objects.equals(teamDisplay[intInput - 1], unitChecking.getName())) {
+                                        invalid();
+                                        waitEnter();
+                                        shopFunction();
+                                    } else if (Objects.equals(teamDisplay[intInput - 1], unitChecking.getName())) {
+                                        team[intInput - 1].merge();
+                                        gold -= unitChecking.getPrice();
+                                    } else {
+                                        teamDisplay[intInput - 1] = unitChecking.getName();
+                                        team[intInput - 1] = unitChecking;
+                                        gold -= unitChecking.getPrice();
                                     }
+                                    unitChecking.buy(intInput - 1);
+                                    shopBought(itemNumber);
                                 }
                                 else{
                                     System.out.println("\nNot enough gold!");
                                     waitEnter();
                                 }
+                            }
+                            else {
+
                             }
                         }
                         else if (command.equals("freeze")){
@@ -336,13 +375,32 @@ public class main {
         }
         shopFunction();
     }
-    public static void battlePhase() throws FileNotFoundException, InterruptedException {
+    public static void battlePhase() throws IOException, InterruptedException {
+        saveTeamHealth();
         randomEnemyTeam();
         battleFunction();
     }
+    public static void saveTeamHealth() {
+        for(int i = 0; i < teamHealthStorage.length; i++){
+            if(team[i] != null){
+                teamHealthStorage[i] = team[i].getHp();
+            }
+        }
+    }
+    public static void setTeamHealth() {
+        for(int i = 0; i < team.length; i++){
+            if(team[i] != null){
+                team[i].setHp(teamHealthStorage[i]);
+            }
+        }
+    }
     public static void randomEnemyTeam() throws FileNotFoundException {
+        Arrays.fill(enemyTeam, null);
+        Arrays.fill(enemyTeamDisplay, null);
         int totalAtk = 0;
         int totalHP = 0;
+        int totalAtkEnemy = 0;
+        int totalHPEnemy = 0;
         Random random = new Random();
         for(int i = 0; i < team.length; i++) {
             if (team[i] != null) {
@@ -374,6 +432,25 @@ public class main {
                 }
             }
         }
+        for(int i = 0; i < enemyTeam.length; i++) {
+            if (enemyTeam[i] != null) {
+                totalAtkEnemy += enemyTeam[i].getAtk();
+                totalHPEnemy += enemyTeam[i].getHp();
+            }
+        }
+        int loopCount = random.nextInt(5) - 2;
+        if(totalAtk-totalAtkEnemy+loopCount>0){
+            for(int j = 0; j < (totalAtk-totalAtkEnemy+loopCount); j++){
+                int randomNumber = random.nextInt(5);
+                if(enemyTeam[randomNumber] != null) enemyTeam[randomNumber].setAtk(enemyTeam[randomNumber].getAtk()+1);
+            }
+        }
+        if(totalHP-totalHPEnemy+loopCount>0){
+            for(int j = 0; j < (totalHP-totalHPEnemy+loopCount); j++){
+                int randomNumber = random.nextInt(5);
+                if(enemyTeam[randomNumber] != null) enemyTeam[randomNumber].setHp(enemyTeam[randomNumber].getHp()+1);
+            }
+        }
         for(int i = 0; i < enemyTeamDisplay.length; i++){
             if(enemyTeam[i]!=null) {
                 enemyTeamDisplay[i] = enemyTeam[i].getName();
@@ -403,7 +480,7 @@ public class main {
         }
         System.out.println(Arrays.deepToString(yourStatsDisplay) + "        " + Arrays.deepToString(enemyStatsDisplay));
     }
-    public static void battleFunction() throws FileNotFoundException, InterruptedException {
+    public static void battleFunction() throws IOException, InterruptedException {
         for(int i = 0; i <= 50; i++){
             System.out.println();
         }
@@ -413,6 +490,10 @@ public class main {
             teamBattle[i] = team[i];
             enemyTeamBattle[i] = enemyTeam[i];
         }
+        /*teamDisplayBattle = teamDisplay.clone();
+        enemyTeamDisplayBattle = enemyTeamDisplay.clone();
+        teamBattle = team.clone();
+        enemyTeamBattle = enemyTeam.clone();*/
         System.out.println("   " + Arrays.toString(teamDisplayBattle) + "               " + Arrays.toString(enemyTeamDisplayBattle));
         statsMaker();
         Scanner scanner = new Scanner(System.in);
@@ -439,6 +520,10 @@ public class main {
             }
             else if(command.equals("start")){
                 fighting = 1;
+                for(int i = 0; i < teamBattle.length; i++){
+                    if(teamBattle[i]!=null) teamBattle[i].startOfBattle("Player", i);
+                    if(enemyTeamBattle[i]!=null)  enemyTeamBattle[i].startOfBattle("Enemy", i);
+                }
                 while (fighting != 0) {
                     battleTurn();
                 }
@@ -452,7 +537,7 @@ public class main {
         }
         battleFunction();
     }
-    public static void battleTurn() throws FileNotFoundException, InterruptedException {
+    public static void battleTurn() throws IOException, InterruptedException {
         for(int i = 0; i <= 50; i++){
             System.out.println();
         }
@@ -466,12 +551,14 @@ public class main {
         }
         else {
             teamBattle[4].normalAttack();
+            //System.out.println(team[4]);
         }
         boolean teamEmpty = checkTeamEmptyBattle("Player");
         boolean enemyTeamEmpty = checkTeamEmptyBattle("Enemy");
         if(teamEmpty==true && enemyTeamEmpty==true){
             fighting = 0;
             System.out.println("It was a tie!");
+            waitEnter();
             shopPhase();
         }
         else if(teamEmpty==true){
@@ -491,12 +578,33 @@ public class main {
             wins++;
             System.out.println("Wins: " + wins);
             waitEnter();
+            tenWinCheck();
             shopPhase();
         }
         System.out.println("   " + Arrays.toString(teamDisplayBattle) + "               " + Arrays.toString(enemyTeamDisplayBattle));
         statsMaker();
         System.out.println("Press Enter to continue.");
         waitEnter();
+    }
+    public static void tenWinCheck() throws IOException {
+        String input;
+        Scanner scanner = new Scanner(System.in);
+        if(wins>=10){
+            System.out.println("You have reached at least 10 wins and have beaten Classic Mode! Do you want to continue playing (y/n)?: ");
+            input = scanner.nextLine();
+            if(input.equals("y")) {
+                //nothing
+            }
+            else if(input.equals("n")) {
+                updateLeaderboard("leaderboard",username,wins);
+                System.out.println("Score uploaded to leaderboard. See you next time!");
+                System.exit(1);
+            }
+            else{
+                invalid();
+                tenWinCheck();
+            }
+        }
     }
     public static boolean checkTeamEmptyBattle(String team){
         if(team.equals("Player")){
@@ -557,8 +665,12 @@ public class main {
         }
         System.out.println("The enemy's team moved forward!");
     }
-    public static void gameOver(){
-
+    public static void gameOver() throws IOException, InterruptedException {
+        System.out.println("You lost all your lives... Game Over! (Your score will be updated in the leaderboard!)");
+        waitEnter();
+        updateLeaderboard("leaderboard", username, wins);
+        displayMenu();
+        userSelectMenu();
     }
     public static void shopRefresh() throws FileNotFoundException {
         for(int i = 0; i < shopDisplayUnits.length; i++){
@@ -573,13 +685,14 @@ public class main {
         }
     }
     public static void shopBought(int itemNum) throws FileNotFoundException {
-       if(itemNum<=5){
-           shopDisplayUnits[itemNum-1]="Empty";
-           shopUnits[itemNum-1] = null;
+       if(itemNum<=5) {
+           shopDisplayUnits[itemNum - 1] = "Empty";
+           shopUnits[itemNum - 1] = null;
        }
        else if(itemNum>=6){
            shopPerks[itemNum-1] = null;
        }
+       frozenItems[itemNum-1] = 0;
     }
     public static void displayMenu() { //displays main menu UI
         System.out.println("   ▀████▀     ██     ▀████▀   ▀███▀     ██     ▀███▀▀▀██▄     ██     ███▀▀██▀▀█████▀▀██▀▀███████▀   ▀███▀▀▀███▀███▀▀▀██▄");
@@ -702,6 +815,51 @@ public class main {
             }   System.out.println("Done");
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+    public static void displayLeaderboard(String fileName) throws FileNotFoundException { //prints out content of a file
+        File file = new File(fileName);
+        Scanner fileScanner = new Scanner(file);
+        int i = 1;
+        while (fileScanner.hasNextLine()) {
+            System.out.println(i + " - " + fileScanner.nextLine());
+            i++;
+        }
+        fileScanner.close();
+    }
+    public static void updateLeaderboard(String outputFilename, String username, int score) throws IOException {
+        File file = new File(outputFilename);
+        BufferedReader bufferedReader = new BufferedReader(new FileReader(file));
+        String[] lines = new String[5];
+        for (int i = 0; i < 5; i++) {
+            lines[i] = bufferedReader.readLine();
+        }
+        bufferedReader.close();
+        boolean scoreUpdated = false;
+        for (int i = 0; i < 5; i++) {
+            String line = lines[i];
+            int existingScore = Integer.parseInt(line.substring(line.lastIndexOf(":") + 1).trim());
+            if (score > existingScore) {
+                // Shift the scores down one position
+                for (int j = 4; j > i; j--) {
+                    lines[j] = lines[j - 1];
+                }
+                lines[i] = String.format("Username: %s | Wins: %d", username, score);
+                scoreUpdated = true;
+                break;
+            }
+        }
+        BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(file));
+        for (String line : lines) {
+            bufferedWriter.write(line);
+            bufferedWriter.newLine();
+        }
+        bufferedWriter.close();
+        if (!scoreUpdated) {
+            bufferedWriter = new BufferedWriter(new FileWriter(file, true));
+            bufferedWriter.write(String.format("Username: %s | Wins: %d", username, score));
+            bufferedWriter.newLine();
+            bufferedWriter.close();
         }
     }
 }

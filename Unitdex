@@ -1,6 +1,6 @@
 name;tier;atk;hp;l1ability;l2ability;l3ability
 Ant;1;2;2;Faint → Give one random friend +1 attack and +1 health.;Faint → Give one random friend +2 attack and +2 health.;Faint → Give one random friend +3 attack and +3 health.
-Beaver;1;3;2;Sell → Give two random friends +1 attack.;Sell → Give two random friends +1 attack.;Sell → Give three random friends +1 attack.
+Beaver;1;3;2;Sell → Give one random friend +1 attack.;Sell → Give two random friends +1 attack.;Sell → Give three random friends +1 attack.
 Cricket;1;1;3;Faint → Summon one 1/1 Zombie Cricket.;Faint → Summon one 2/2 Zombie Cricket.;Faint → Summon one 3/3 Zombie Cricket.
 Zombie Cricket;0;1;1;None;None;None
 Duck;1;2;3;Sell → Give shop units +1 health.;Sell → Give shop pets +2 health.;Sell → Give shop pets +3 health.
@@ -10,5 +10,5 @@ Mosquito;1;2;2;Start of battle → Deal 1 damage to 1 random enemy.;Start of bat
 Otter;1;1;3;Buy → Give 1 random friend +1 health.;Buy → Give 2 random friends +1 health.;Buy → Give 3 random friends +1 health.
 Pig;1;4;1;Sell → Gain +1 gold.;Sell → Gain +2 gold.;Sell → Gain +3 gold.
 Pigeon;1;3;1;Sell → Stock 1 free Bread Crumbs.;Sell → Stock 2 free Bread Crumbs.;Sell → Stock 3 free Bread Crumbs.
-Bee;1;1;1;None;None;None
+Bee;0;1;1;None;None;None
 Sup;10;10;10;None;None;None
